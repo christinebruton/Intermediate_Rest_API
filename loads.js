@@ -23,30 +23,47 @@ function post_load(loadObj){
 }
 
 
+function add_load_carrier(b_id, l_id){
+    const l_key = datastore.key([LOAD, parseInt(l_id,10)]);
+
+    datastore.get(l_key, (err, load) =>{
+        if (load.carrier == null){
+            // load.carrier = b_id;
+            const new_load = {"weight": load.weight, "carrier": b_is, "content": load.content,"delivery_date": load.delivery_date};
+            // return datastore.save({"key":l_key, "data":new_load}).then(() => {return key});
+            return datastore.save({"key":l_key, "data":new_load})
+        }else {
+            res.status(403).send({"Error":"The load is not empty"})
+           throw error; 
+        }
+    })
+	// const new_load = {"weight": loadObj.weight, "carrier": loadObj.carrier, "content": loadObj.content,"delivery_date": loadObj.delivery_date};
+	
+}
 
 
 
 /************************ GET HELPER FUNCTIONS******************************/
 
-function get_guests(req){
-    var q = datastore.createQuery(GUEST).limit(2);
-    const results = {};
-    var prev;
-    if(Object.keys(req.query).includes("cursor")){
-        prev = req.protocol + "://" + req.get("host") + req.baseUrl + "?cursor=" + req.query.cursor;
-        q = q.start(req.query.cursor);
-    }
-	return datastore.runQuery(q).then( (entities) => {
-            results.items = entities[0].map(ds.fromDatastore);
-            if(typeof prev !== 'undefined'){
-                results.previous = prev;
-            }
-            if(entities[1].moreResults !== ds.Datastore.NO_MORE_RESULTS ){ //see if there are more results
-                results.next = req.protocol + "://" + req.get("host") + req.baseUrl + "?cursor=" + entities[1].endCursor;
-            }
-			return results;
-		});
-}
+// function get_guests(req){
+//     var q = datastore.createQuery(GUEST).limit(2);
+//     const results = {};
+//     var prev;
+//     if(Object.keys(req.query).includes("cursor")){
+//         prev = req.protocol + "://" + req.get("host") + req.baseUrl + "?cursor=" + req.query.cursor;
+//         q = q.start(req.query.cursor);
+//     }
+// 	return datastore.runQuery(q).then( (entities) => {
+//             results.items = entities[0].map(ds.fromDatastore);
+//             if(typeof prev !== 'undefined'){
+//                 results.previous = prev;
+//             }
+//             if(entities[1].moreResults !== ds.Datastore.NO_MORE_RESULTS ){ //see if there are more results
+//                 results.next = req.protocol + "://" + req.get("host") + req.baseUrl + "?cursor=" + entities[1].endCursor;
+//             }
+// 			return results;
+// 		});
+// }
 
 
 async function get_loads(req){

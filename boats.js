@@ -128,6 +128,7 @@ function put_reservation(lid, gid){
 
 //put helper for put route
 async function put_boat_load(b_id, l_id){
+    
     console.log("in put boat load b_id" + b_id + "l_id" + l_id)
     const b_key = datastore.key([BOAT, parseInt(b_id,10)]);
     const boat = await datastore.get(b_key);
@@ -139,6 +140,26 @@ async function put_boat_load(b_id, l_id){
     console.log(JSON.stringify(boat[0].load));
     return datastore.save({ "key": b_key, "data": boat[0] });
 
+}
+
+async function add_load_carrier(b_id, l_id){
+    const l_key = datastore.key([LOAD, parseInt(l_id,10)]);
+ 
+
+    try {
+        const load = await datastore.get(l_key);
+        const new_load = {"weight": load.weight, "carrier": b_id, "content": load.content,"delivery_date": load.delivery_date};
+        datastore.save({"key":l_key, "data":new_load})
+        return load;
+    } catch (error) {
+        console.log('caught ' + error);
+        throw error;
+    }
+
+
+
+	// const new_load = {"weight": loadObj.weight, "carrier": loadObj.carrier, "content": loadObj.content,"delivery_date": loadObj.delivery_date};
+	
 }
 
 /* ------------- End Model Functions ------------- */
@@ -245,7 +266,7 @@ router.put('/:lid/guests/:gid', function(req, res){
     .then(res.status(200).end());
 });
 
-router.put('/:b_id/loads/:l_id', function(req, res){
+router.put('/:b_idd/loads/:l_id', function(req, res){
     const l_key = datastore.key([LOAD, parseInt(req.params.l_id,10)]);
     const b_key = datastore.key([BOAT, parseInt(req.params.b_id,10)]);
     check_if_boats_exists(b_key).then(boat=>{
@@ -258,7 +279,15 @@ router.put('/:b_id/loads/:l_id', function(req, res){
             
          }else {
             put_boat_load(req.params.b_id, req.params.l_id);
-            res.status(204).end()
+            // add_load_carrier(req.params.b_id, req.params.l_id).then(res.status(204)).catch((error)=>{
+            //     console.log('In router.put caught ' + error); 
+            //         res.status(404).send({"Error": "The specified boat and/or slip does not exist"});
+            // }); 
+            add_load_carrier(req.params.b_id, req.params.l_id).then(load=>{
+
+                console.log("IN lOAD "+JSON.stringify(load))
+            })
+            
          }
         
      })
