@@ -19,6 +19,13 @@ function post_guest(name, description, price){
 	return datastore.save({"key":key, "data":new_guest}).then(() => {return key});
 }
 
+function post_load(loadObj){
+    var key = datastore.key(LOAD);
+	const new_load = {"weight": loadObj.weight, "carrier": loadObj.carrier, "content": loadObj.content,"delivery_date": loadObj.delivery_date};
+	return datastore.save({"key":key, "data":new_load}).then(() => {return key});
+}
+
+
 /************************ POST HELPER FUNCTIONS******************************/
 async function post_guest(name, ){
     var key = datastore.key(LOAD);
@@ -52,6 +59,32 @@ function get_guests(req){
 		});
 }
 
+
+function get_loads(req){
+    var q = datastore.createQuery(GUEST).limit(2);
+    const results = {};
+    var prev;
+    if(Object.keys(req.query).includes("cursor")){
+        prev = req.protocol + "://" + req.get("host") + req.baseUrl + "?cursor=" + req.query.cursor;
+        q = q.start(req.query.cursor);
+    }
+	return datastore.runQuery(q).then( (entities) => {
+            results.items = entities[0].map(ds.fromDatastore);
+            if(typeof prev !== 'undefined'){
+                results.previous = prev;
+            }
+            if(entities[1].moreResults !== ds.Datastore.NO_MORE_RESULTS ){ //see if there are more results
+                results.next = req.protocol + "://" + req.get("host") + req.baseUrl + "?cursor=" + entities[1].endCursor;
+            }
+			return results;
+		});
+}
+
+
+
+
+
+
 function put_guest(id, name){
     const key = datastore.key([GUEST, parseInt(id,10)]);
     const guest = {"name": name};
@@ -67,16 +100,37 @@ function delete_guest(id){
 
 /* ------------- Begin Controller Functions ------------- */
 
+// router.get('/', function(req, res){
+//     const guests = get_guests(req)
+// 	.then( (guests) => {
+//         res.status(200).json(guests);
+//     });
+// });
+
+
 router.get('/', function(req, res){
-    const guests = get_guests(req)
-	.then( (guests) => {
-        res.status(200).json(guests);
+    const loads = get_loads(req)
+	.then( (loads) => {
+        res.status(200).json(loads);
     });
 });
 
+
 router.post('/', function(req, res){
-    post_guest(req.body.name)
-    .then( key => {res.status(200).send('{ "id": ' + key.id + ' }')} );
+    console.log("body"+ JSON.stringify(req.body))
+    if (!req.body.weight || !req.body.carrier || !req.body.content || !req.body.delivery_date ){
+        res.status(400).send({"Error":"The request object is missing at least one of the required attributes"});
+    }
+    post_load(req.body)
+    .then( key => {resData = {
+        id: key.id,
+        weight: req.body.weight,
+        carrier: req.body.carrier.id,
+        content: req.body.content,
+        delivery_date: req.body.delivery_date,
+        self: req.protocol + "://"+ req.get("host") + req.baseUrl + "/" + key.id 
+    };
+    res.status(201).send(resData)});
 });
 
 router.put('/:id', function(req, res){

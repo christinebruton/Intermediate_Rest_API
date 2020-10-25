@@ -22,42 +22,38 @@ async function post_boat(name, type, length ){
         console.log ("missing parameter")
     }
     var key = datastore.key(BOAT);
-	const new_boat = {"name": name, "type": type, "length": length, "load":[] };
+	const new_boat = {"name": name, "type": type, "length": length, "load":[null] };
     await datastore.save({ "key": key, "data": new_boat });
     return key;
 }
 
-function get_lodgings(req){
+async function get_lodgings(req){
     var q = datastore.createQuery(LODGING).limit(2);
     const results = {};
     if(Object.keys(req.query).includes("cursor")){
         q = q.start(req.query.cursor);
     }
-	return datastore.runQuery(q).then( (entities) => {
-            results.items = entities[0].map(ds.fromDatastore);
-            if(entities[1].moreResults !== ds.Datastore.NO_MORE_RESULTS ){
-                results.next = req.protocol + "://" + req.get("host") + req.baseUrl + "?cursor=" + entities[1].endCursor;
-            }
-			return results;
-		});
+	const entities = await datastore.runQuery(q);
+    results.items = entities[0].map(ds.fromDatastore);
+    if (entities[1].moreResults !== ds.Datastore.NO_MORE_RESULTS) {
+        results.next = req.protocol + "://" + req.get("host") + req.baseUrl + "?cursor=" + entities[1].endCursor;
+    }
+    return results;
 }
 
-function get_boats(req){
+async function get_boats(req){
     var q = datastore.createQuery(BOAT).limit(3);
     const results = {};
     if(Object.keys(req.query).includes("cursor")){ //if there is a cursor
         q = q.start(req.query.cursor); //set the start point of the query to that cursor location
     }
-	return datastore.runQuery(q).then( (entities) => {
-            results.items = entities[0].map(ds.fromDatastore);
-            if(entities[1].moreResults !== ds.Datastore.NO_MORE_RESULTS ){
-                results.next = req.protocol + "://" + req.get("host") + req.baseUrl + "?cursor=" + entities[1].endCursor;
-            }
-			return results;
-		});
+	const entities = await datastore.runQuery(q);
+    results.items = entities[0].map(ds.fromDatastore);
+    if (entities[1].moreResults !== ds.Datastore.NO_MORE_RESULTS) {
+        results.next = req.protocol + "://" + req.get("host") + req.baseUrl + "?cursor=" + entities[1].endCursor;
+    }
+    return results;
 }
-
-
 
 
 function get_lodging_guests(req, id){
@@ -157,12 +153,27 @@ router.get('/', function(req, res){
     });
 });
 
-router.get('/:id/guests', function(req, res){
-    const lodgings = get_lodging_guests(req, req.params.id)
-	.then( (lodgings) => {
-        res.status(200).json(lodgings);
+router.get('/', function(req, res){
+    const boats = get_boats(req)
+	.then( (boats) => {
+        res.status(200).json(boats);
     });
 });
+
+// router.get('/:id/guests', function(req, res){
+//     const lodgings = get_lodging_guests(req, req.params.id)
+// 	.then( (lodgings) => {
+//         res.status(200).json(lodgings);
+//     });
+// });
+
+router.get('/:id/loads', function(req, res){
+    const boats = get_boat_loads(req, req.params.id)
+	.then( (lodgings) => {
+        res.status(200).json(boats);
+    });
+});
+
 
 // router.post('/', function(req, res){
 //     post_lodging(req.body.name, req.body.description, req.body.price)
@@ -174,29 +185,49 @@ router.get('/:id/guests', function(req, res){
 //     .then( key => {res.status(201).send('{ "id": ' + key.id + ' }')} );
 // });
 
+//Get a Boat
+router.get('/:id', function(req, res){
+    const key = datastore.key([BOAT, parseInt(req.params.id,10)]);
+    
+    datastore.get(key, (err, boat) => {
+            if (err) {
+                console.error('There was an error', err);
+                res.status(404).send({"Error":"No boat with this boat_id exists"});
+                return;
+            }
+            console.log("boat.load",boat.load);
+    queryData = {
+            id: req.params.id,
+            name: boat.name,
+            type: boat.type,
+            length: boat.length,
+            load: boat.load,
+            self: req.protocol + "://"+ req.get("host") + req.baseUrl + "/" + key.id 
+        };
+        console.log(queryData);
+        res.status(200).json(queryData)
+    });
+});
+
 //Create a boat
 router.post('/', function(req, res){
-
-    //check for parameters
     const reqLen = req.body.length;
     const reqType = req.body.type;
     const reqName = req.body.name;
     if (!reqLen || !reqType || !reqName){
-        // console.log("undefined");
         res.status(400).send({"Error":"The request object is missing at least one of the required attributes"});
     }
    post_boat(req.body.name, req.body.type, req.body.length)  
-
    .then( key => {
+            console.log(key)
             resData = {
                 id: key.id,
                 name: req.body.name,
                 type: req.body.type,
                 length: req.body.length,
-                load: key.load,
-                self: req.protocol + "://"+ req.get("host") + req.baseUrl + "/" +key.id 
+                load: req.body.load,
+                self: req.protocol + "://"+ req.get("host") + req.baseUrl + "/" + key.id 
             };
-        // console.log(resData['name']);
         res.status(201).send(resData)}).catch((error)=>{
                 console.log('In router.post ' + error); 
                 res.status(404).send({"Error": "The specified boat and/or slip does not exist"});
