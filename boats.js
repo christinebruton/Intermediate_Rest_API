@@ -22,24 +22,24 @@ async function post_boat(name, type, length ){
         console.log ("missing parameter")
     }
     var key = datastore.key(BOAT);
-	const new_boat = {"name": name, "type": type, "length": length, "load":[null] };
+	const new_boat = {"name": name, "type": type, "length": length, "load":[] };
     await datastore.save({ "key": key, "data": new_boat });
     return key;
 }
 
-async function get_lodgings(req){
-    var q = datastore.createQuery(LODGING).limit(2);
-    const results = {};
-    if(Object.keys(req.query).includes("cursor")){
-        q = q.start(req.query.cursor);
-    }
-	const entities = await datastore.runQuery(q);
-    results.items = entities[0].map(ds.fromDatastore);
-    if (entities[1].moreResults !== ds.Datastore.NO_MORE_RESULTS) {
-        results.next = req.protocol + "://" + req.get("host") + req.baseUrl + "?cursor=" + entities[1].endCursor;
-    }
-    return results;
-}
+// async function get_lodgings(req){
+//     var q = datastore.createQuery(LODGING).limit(2);
+//     const results = {};
+//     if(Object.keys(req.query).includes("cursor")){
+//         q = q.start(req.query.cursor);
+//     }
+// 	const entities = await datastore.runQuery(q);
+//     results.items = entities[0].map(ds.fromDatastore);
+//     if (entities[1].moreResults !== ds.Datastore.NO_MORE_RESULTS) {
+//         results.next = req.protocol + "://" + req.get("host") + req.baseUrl + "?cursor=" + entities[1].endCursor;
+//     }
+//     return results;
+// }
 
 async function get_boats(req){
     var q = datastore.createQuery(BOAT).limit(3);
@@ -167,6 +167,7 @@ router.get('/', function(req, res){
 //     });
 // });
 
+//get boat
 router.get('/:id/loads', function(req, res){
     const boats = get_boat_loads(req, req.params.id)
 	.then( (lodgings) => {
@@ -195,7 +196,6 @@ router.get('/:id', function(req, res){
                 res.status(404).send({"Error":"No boat with this boat_id exists"});
                 return;
             }
-            console.log("boat.load",boat.load);
     queryData = {
             id: req.params.id,
             name: boat.name,

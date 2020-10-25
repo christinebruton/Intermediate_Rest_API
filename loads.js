@@ -60,28 +60,24 @@ function get_guests(req){
 }
 
 
-function get_loads(req){
-    var q = datastore.createQuery(GUEST).limit(2);
+async function get_loads(req){
+    var q = datastore.createQuery(LOAD).limit(3);
     const results = {};
     var prev;
     if(Object.keys(req.query).includes("cursor")){
         prev = req.protocol + "://" + req.get("host") + req.baseUrl + "?cursor=" + req.query.cursor;
         q = q.start(req.query.cursor);
     }
-	return datastore.runQuery(q).then( (entities) => {
-            results.items = entities[0].map(ds.fromDatastore);
-            if(typeof prev !== 'undefined'){
-                results.previous = prev;
-            }
-            if(entities[1].moreResults !== ds.Datastore.NO_MORE_RESULTS ){ //see if there are more results
-                results.next = req.protocol + "://" + req.get("host") + req.baseUrl + "?cursor=" + entities[1].endCursor;
-            }
-			return results;
-		});
+	const entities = await datastore.runQuery(q);
+    results.items = entities[0].map(ds.fromDatastore);
+    if (typeof prev !== 'undefined') {
+        results.previous = prev;
+    }
+    if (entities[1].moreResults !== ds.Datastore.NO_MORE_RESULTS) { //see if there are more results
+        results.next = req.protocol + "://" + req.get("host") + req.baseUrl + "?cursor=" + entities[1].endCursor;
+    }
+    return results;
 }
-
-
-
 
 
 
@@ -115,6 +111,29 @@ router.get('/', function(req, res){
     });
 });
 
+
+//Get a Load
+router.get('/:id', function(req, res){
+    const key = datastore.key([LOAD, parseInt(req.params.id,10)]);
+    
+    datastore.get(key, (err, load) => {
+            if (err) {
+                console.error('There was an error', err);
+                res.status(404).send({"Error":"No load with this load_id exists"});
+                return;
+            }
+    queryData = {
+            id: req.params.id,
+            weight: load.weight,
+            carrier: load.carrier,
+            content: load.content,
+            delivery_date: load.delivery_date,
+            self: req.protocol + "://"+ req.get("host") + req.baseUrl + "/" + key.id 
+        };
+        console.log(queryData);
+        res.status(200).json(queryData)
+    });
+});
 
 router.post('/', function(req, res){
     console.log("body"+ JSON.stringify(req.body))
