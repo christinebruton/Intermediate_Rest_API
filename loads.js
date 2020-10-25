@@ -16,30 +16,18 @@ router.use(bodyParser.json());
 
 /************************ POST HELPER FUNCTIONS******************************/
 
-function post_load(loadObj){
+async function post_load(loadObj){
     var key = datastore.key(LOAD);
 	const new_load = {"weight": loadObj.weight, "carrier": loadObj.carrier, "content": loadObj.content,"delivery_date": loadObj.delivery_date};
-	return datastore.save({"key":key, "data":new_load}).then(() => {return key});
+	await datastore.save({ "key": key, "data": new_load });
+    return key;
 }
 
 
-function add_load_carrier(b_id, l_id){
-    const l_key = datastore.key([LOAD, parseInt(l_id,10)]);
 
-    datastore.get(l_key, (err, load) =>{
-        if (load.carrier == null){
-            // load.carrier = b_id;
-            const new_load = {"weight": load.weight, "carrier": b_is, "content": load.content,"delivery_date": load.delivery_date};
-            // return datastore.save({"key":l_key, "data":new_load}).then(() => {return key});
-            return datastore.save({"key":l_key, "data":new_load})
-        }else {
-            res.status(403).send({"Error":"The load is not empty"})
-           throw error; 
-        }
-    })
-	// const new_load = {"weight": loadObj.weight, "carrier": loadObj.carrier, "content": loadObj.content,"delivery_date": loadObj.delivery_date};
-	
-}
+
+
+
 
 
 

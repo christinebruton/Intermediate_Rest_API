@@ -10,6 +10,7 @@ const GUEST = "Guest";
 
 const BOAT = "Boat";
 const LOAD = "Load";
+const BOATLOAD = "Boatload"
 
 router.use(bodyParser.json());
 
@@ -17,10 +18,11 @@ router.use(bodyParser.json());
 
 /* ------------- Begin Lodging Model Functions ------------- */
 /************************ POST HELPER FUNCTIONS******************************/
+//helper function to post but with empty array as load (TODO:should it be undefined instead)
 async function post_boat(name, type, length ){
-    if (!length || !type || !name ){
-        console.log ("missing parameter")
-    }
+    // if (!length || !type || !name ){
+    //     console.log ("missing parameter")
+    // }
     var key = datastore.key(BOAT);
 	const new_boat = {"name": name, "type": type, "length": length, "load":[] };
     await datastore.save({ "key": key, "data": new_boat });
@@ -28,7 +30,10 @@ async function post_boat(name, type, length ){
 }
 
 
+
+
 //**************GET HELPER ********* */
+//for view boats helper funciton to get boats and display 3 at a time
 async function get_boats(req){
     var q = datastore.createQuery(BOAT).limit(3);
     const results = {};
@@ -60,7 +65,7 @@ function get_lodging_guests(req, id){
     });
 }
 
-
+//goes with router.get('/:id/loads', function(req, res)
 async function get_boat_loads(req, id){
     const key = datastore.key([BOAT, parseInt(id,10)]);
     const boats = await datastore.get(key);
@@ -74,35 +79,49 @@ async function get_boat_loads(req, id){
 }
 
 /************************ PUT HELPER FUNCTIONS ******************************/
+//check if boat exists and return the entity if so or an error
+// async function check_if_boats_exists(keyObj){
+//     try {
+//         const entity = await datastore.get(keyObj);
+//         return entity;
+//     } catch (error) {
+//         console.log('caught ' + error);
+//         throw error;
+//     }
+// }
 
-async function check_if_boats_exists(keyObj){
-  
+
+async function check_if_boat_exists(keyObj){
     try {
         const entity = await datastore.get(keyObj);
         return entity;
     } catch (error) {
-        console.log('caught ' + error);
-        throw error;
+        console.log('check_if_boat_exists: caught ' + error);
+         throw error;
     }
 }
 
 
-
-function put_lodging(id, name, description, price){
-    const key = datastore.key([LODGING, parseInt(id,10)]);
-    const lodging = {"name": name, "description": description, "price": price};
-    return datastore.save({"key":key, "data":lodging});
+async function check_if_load_exists(keyObj){
+    try {
+        const entity = await datastore.get(keyObj);
+        return entity;
+    } catch (error) {
+        console.log('check_if_load_exists: caught ' + error);
+         //throw error;
+    }
 }
 
 
-function put_boat(id, name, description, price){
+//put function for boat (not using currently)
+function put_boat(id, name, length){
     const key = datastore.key([BOAT, parseInt(id,10)]);
     const boat  = {"name": name, "type": type, "length": length, "loads": [] };
     return datastore.save({"key":key, "data":boat});
 }
 
 
-
+/************************ PUT HELPER FUNCTIONS ******************************/
 function delete_lodging(id){
     const key = datastore.key([LODGING, parseInt(id,10)]);
     return datastore.delete(key);
@@ -142,36 +161,17 @@ async function put_boat_load(b_id, l_id){
 
 }
 
-async function add_load_carrier(b_id, l_id){
-    const l_key = datastore.key([LOAD, parseInt(l_id,10)]);
- 
-
-    try {
-        const load = await datastore.get(l_key);
-        const new_load = {"weight": load.weight, "carrier": b_id, "content": load.content,"delivery_date": load.delivery_date};
-        datastore.save({"key":l_key, "data":new_load})
-        return load;
-    } catch (error) {
-        console.log('caught ' + error);
-        throw error;
-    }
-
-
-
-	// const new_load = {"weight": loadObj.weight, "carrier": loadObj.carrier, "content": loadObj.content,"delivery_date": loadObj.delivery_date};
-	
-}
 
 /* ------------- End Model Functions ------------- */
 
 /* ------------- Begin Controller Functions ------------- */
 
-router.get('/', function(req, res){
-    const lodgings = get_lodgings(req)
-	.then( (lodgings) => {
-        res.status(200).json(lodgings);
-    });
-});
+// router.get('/', function(req, res){
+//     const lodgings = get_lodgings(req)
+// 	.then( (lodgings) => {
+//         res.status(200).json(lodgings);
+//     });
+// });
 
 router.get('/', function(req, res){
     const boats = get_boats(req)
@@ -187,7 +187,7 @@ router.get('/', function(req, res){
 //     });
 // });
 
-//get boat
+//get boat's loads
 router.get('/:id/loads', function(req, res){
     const boats = get_boat_loads(req, req.params.id)
 	.then( (boats) => {
@@ -236,22 +236,24 @@ router.post('/', function(req, res){
     const reqName = req.body.name;
     if (!reqLen || !reqType || !reqName){
         res.status(400).send({"Error":"The request object is missing at least one of the required attributes"});
+    }else{
+        post_boat(req.body.name, req.body.type, req.body.length)  
+        .then( key => {
+                 console.log(key)
+                 resData = {
+                     id: key.id,
+                     name: req.body.name,
+                     type: req.body.type,
+                     length: req.body.length,
+                     load: req.body.load,
+                     self: req.protocol + "://"+ req.get("host") + req.baseUrl + "/" + key.id 
+                 };
+             res.status(201).send(resData)}).catch((error)=>{
+                     console.log('In router.post ' + error); 
+                     res.status(404).send({"Error": "The specified boat and/or slip does not exist"});
+                     }); 
     }
-   post_boat(req.body.name, req.body.type, req.body.length)  
-   .then( key => {
-            console.log(key)
-            resData = {
-                id: key.id,
-                name: req.body.name,
-                type: req.body.type,
-                length: req.body.length,
-                load: req.body.load,
-                self: req.protocol + "://"+ req.get("host") + req.baseUrl + "/" + key.id 
-            };
-        res.status(201).send(resData)}).catch((error)=>{
-                console.log('In router.post ' + error); 
-                res.status(404).send({"Error": "The specified boat and/or slip does not exist"});
-                }); 
+
 });
 
 router.put('/:id', function(req, res){
@@ -261,51 +263,69 @@ router.put('/:id', function(req, res){
 
 
 
-router.put('/:lid/guests/:gid', function(req, res){
-    put_reservation(req.params.lid, req.params.gid)
-    .then(res.status(200).end());
-});
+//ORIGINAL PUT REQUEST
+// router.put('/:b_id/loads/:l_id', function(req, res){
+//     const l_key = datastore.key([LOAD, parseInt(req.params.l_id,10)]);
+//     const b_key = datastore.key([BOAT, parseInt(req.params.b_id,10)]);
+//     check_if_boats_exists(b_key).then(boat=>{
+//         datastore.get(l_key, (err, load) =>{
+//          if (err) {
+//              console.error('There was an error', err);
+//              res.status(404).send({"Error":"The specified load does not exist"});
+//          }else {
+//             put_boat_load(req.params.b_id, req.params.l_id);
+//             add_load_carrier(req.params.b_id, req.params.l_id).then(load=>{
+//                 console.log("IN lOAD "+JSON.stringify(load))
+//             })
+//          }
+//      })
+//          }).catch((error)=>{
+//              console.log('In router.put caught ' + error); 
+//                  res.status(404).send({"Error": "The specified boat does not exist"});
+//          }); 
 
-router.put('/:b_idd/loads/:l_id', function(req, res){
+// });
+
+
+
+
+router.put('/:b_id/loads/:l_id', function(req, res, err){
     const l_key = datastore.key([LOAD, parseInt(req.params.l_id,10)]);
     const b_key = datastore.key([BOAT, parseInt(req.params.b_id,10)]);
-    check_if_boats_exists(b_key).then(boat=>{
+   
+        //check validity of boat id
+        check_if_boat_exists(b_key).then(
+            boat=>{
 
-        datastore.get(l_key, (err, load) =>{
-         //console.log(slip)
-         if (err) {
-             console.error('There was an error', err);
-             res.status(404).send({"Error":"The specified load does not exist"});
-            
-         }else {
-            put_boat_load(req.params.b_id, req.params.l_id);
-            // add_load_carrier(req.params.b_id, req.params.l_id).then(res.status(204)).catch((error)=>{
-            //     console.log('In router.put caught ' + error); 
-            //         res.status(404).send({"Error": "The specified boat and/or slip does not exist"});
-            // }); 
-            add_load_carrier(req.params.b_id, req.params.l_id).then(load=>{
+           datastore.get(l_key, (err, load) =>{
+            console.log("got load" + JSON.stringify(load))
+            if (err) {
+                console.error('There was an error', err);
+                res.status(404).send({"Error":"The specified load does not exist"});
+              //TODO: check for a relationhip instead if deletes fail 
+            }else if (load.carrier == null || load.carrier == []){
+                put_boat_load(b_key, l_key)
+                // load.carrier = req.params.load_id        
+                // datastore.save({
+                //     key: slip_key,
+                //     data: slip
+                //})
+                .then(res.status(204).send())
+            }else {
+                res.status(403).send({"Error":"The load's carrier is already assigned"})
+            }
+           
+        })
+                //res.status(204).send();
+                console.log("got a boat");
+            }).catch((error)=>{
+                console.log('In router.put caught ' + error); 
+                    res.status(404).send({"Error": "The specified boat does not exist"});
+            }); 
 
-                console.log("IN lOAD "+JSON.stringify(load))
-            })
-            
-         }
-        
-     })
-             //res.status(204).send();
-             console.log("got a boat");
-         }).catch((error)=>{
-             console.log('In router.put caught ' + error); 
-                 res.status(404).send({"Error": "The specified boat does not exist"});
-         }); 
-
-
-
-
-
-    // console.log("here's whats in put route" + JSON.stringify(req.params) )
-    // put_boat_load(req.params.b_id, req.params.l_id)
-    // .then(res.status(204).end());
-});
+        });
+  
+    
 
 router.delete('/:id', function(req, res){
     delete_lodging(req.params.id).then(res.status(200).end())

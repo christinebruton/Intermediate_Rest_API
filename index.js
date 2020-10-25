@@ -6,3 +6,5 @@ router.use('/guests', require('./guests'));
 //--------------
 router.use('/boats', require('./boats'));
 router.use('/loads', require('./loads'));
+
+// router.use('/boat_loads', require('./boat_loads'));
