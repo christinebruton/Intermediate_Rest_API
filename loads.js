@@ -13,11 +13,8 @@ router.use(bodyParser.json());
 
 
 /* ------------- Begin guest Model Functions ------------- */
-function post_guest(name, description, price){
-    var key = datastore.key(GUEST);
-	const new_guest = {"name": name};
-	return datastore.save({"key":key, "data":new_guest}).then(() => {return key});
-}
+
+/************************ POST HELPER FUNCTIONS******************************/
 
 function post_load(loadObj){
     var key = datastore.key(LOAD);
@@ -26,18 +23,10 @@ function post_load(loadObj){
 }
 
 
-/************************ POST HELPER FUNCTIONS******************************/
-async function post_guest(name, ){
-    var key = datastore.key(LOAD);
-	const new_load = {"weight": name, "carrier": boat_id, "content":content, "delivery_date": delevery_date};
-	await datastore.save({ "key": key, "data": new_load });
-    return key;
-}
+
 
 
 /************************ GET HELPER FUNCTIONS******************************/
-
-
 
 function get_guests(req){
     var q = datastore.createQuery(GUEST).limit(2);
