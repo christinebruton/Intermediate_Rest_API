@@ -247,12 +247,19 @@ router.get('/:id', function(req, res){
                 res.status(404).send({"Error":"No boat with this boat_id exists"});
                 return;
             }
+            // if( typeof(boat[0].loads) === 'undefined'){
+            //     boat[0].loads = [];
+            // }     
+            console.log("keys of boat loads" + Object.keys(boat))
+            //console.log("keys of boat loads" + Object.keys(boat[0]))
+            console.log("keys of boat loads" + Object.keys(boat['loads']))
+          
     queryData = {
             id: req.params.id,
             name: boat.name,
             type: boat.type,
             length: boat.length,
-            load: boat.load,
+            load: boat['loads'][0],
             self: req.protocol + "://"+ req.get("host") + req.baseUrl + "/" + key.id 
         };
         console.log(queryData);
@@ -303,6 +310,7 @@ router.put('/:b_id/loads/:l_id', function(req, res, err){
         boat=>{
 
 
+            put_boat_load(req.params.b_id, req.params.l_id).then(key=>{console.log ('In router.put'+ JSON.stringify(boat[0].loads))});
         }).catch((err)=>{
             console.log('In router.put caught ' + err); 
                 res.status(404).send({"Error": "The specified boat does not exist"});
@@ -314,9 +322,7 @@ router.put('/:b_id/loads/:l_id', function(req, res, err){
              if (load[0].carrier.id == null){
                 put_load_carrier(req.params.b_id, req.params.l_id)
                 .then(
-                 
-                    console.log ("router.put: load after save" + JSON.stringify(load[0].carrier.id)),
-                       
+                        
                     res.status(204).send()); 
              }else {
                 console.log ("router.put: load after save" + JSON.stringify(load[0].carrier.id));
@@ -394,11 +400,7 @@ router.delete('/:b_id/loads/:l_id', function(req, res){
             })
             
             })
-            // .catch((error)=>{
-            //     console.log('In router.delete boat from slip caught ' + error); 
-            //         res.status(404).send({"Error": "No boat with this boat_id is at the slip with this slip_id"});
-            // });  
-// });
+
 
 router.delete('/:id', function(req, res){
     delete_lodging(req.params.id).then(res.status(200).end())
