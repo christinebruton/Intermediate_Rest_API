@@ -146,20 +146,43 @@ function put_reservation(lid, gid){
 }
 
 //put helper for put route
-async function put_boat_load(b_id, l_id){
+function put_boat_load(b_id, l_id){
     
-    console.log("in put boat load b_id" + b_id + "l_id" + l_id)
+    console.log("put_boat_load: in put boat load b_id" + JSON.stringify(b_id) + "l_id" + JSON.stringify(l_id))
     const b_key = datastore.key([BOAT, parseInt(b_id,10)]);
-    const boat = await datastore.get(b_key);
-    console.log("typof Boat[0].load" + typeof (boat[0].load));
-    if (typeof (boat[0].load) === 'undefined') {
-        boat[0].load = [];
-    }
-    boat[0].load.push(l_id);
-    console.log(JSON.stringify(boat[0].load));
-    return datastore.save({ "key": b_key, "data": boat[0] });
+    return datastore.get(b_key)
+    .then( (boat) => {
+        if( typeof(boat[0].guests) === 'undefined'){
+            boat[0].load = [];
+        }
+        boat[0].load.push(l_id);
+        console.log ("In put_boat_load"+ boat[0].load)
+        return datastore.save({"key":b_key, "data":boat[0]});
+    });
 
 }
+
+// function put_boat_load(b_id, l_id){
+//     console.log("put_boat_load: in put boat load b_id" + JSON.stringify(b_id) + "l_id" + JSON.stringify(l_id))
+//     const b_key = datastore.key([BOAT, parseInt(b_id,10)]);
+//     return datastore.get(b_key)
+//     .then( (boat) => {
+//         console.log("put_boat_load:typeof(boat[0].load"+boat[0].load)
+//         if( typeof(boat[0].load) === 'undefined'){
+//             boat[0].load = [];
+//         }
+//         boat[0].load.push(l_id);
+//         console.log("boat[0]load after push"+ JSON.stringify(boat[0].load));
+ 
+//         return datastore.save({"key":b_key, "data":boat[0]});
+//     }).catch((error)=>{
+//         console.log('In put_boat_load ' + error); 
+//         }); 
+
+// }
+
+
+
 
 
 /* ------------- End Model Functions ------------- */
@@ -292,32 +315,40 @@ router.put('/:id', function(req, res){
 router.put('/:b_id/loads/:l_id', function(req, res, err){
     const l_key = datastore.key([LOAD, parseInt(req.params.l_id,10)]);
     const b_key = datastore.key([BOAT, parseInt(req.params.b_id,10)]);
-   
+    
         //check validity of boat id
         check_if_boat_exists(b_key).then(
             boat=>{
 
            datastore.get(l_key, (err, load) =>{
+            //console.log("router.put: load.carrier " + load.carrier.id) 
             console.log("got load" + JSON.stringify(load))
             if (err) {
                 console.error('There was an error', err);
                 res.status(404).send({"Error":"The specified load does not exist"});
               //TODO: check for a relationhip instead if deletes fail 
-            }else if (load.carrier == null || load.carrier == []){
-                put_boat_load(b_key, l_key)
-                // load.carrier = req.params.load_id        
-                // datastore.save({
-                //     key: slip_key,
-                //     data: slip
-                //})
-                .then(res.status(204).send())
-            }else {
+            }else if (load.carrier.id == null){
+                console.log ("router.put: load carrier must have equaled null")
+                console.log("router.put: here is load" + JSON.stringify(load) )
+                console.log("router.put: here is boat" + JSON.stringify(boat) )
+                
+                boat[0].load.push(req.params.l_id);
+                
+                console.log ("Router.put after push"+ boat[0].load)
+                datastore.save({"key":b_key, "data":boat[0]});
+
+                load.carrier.id = req.params.b_id
+                datastore.save({"key":l_key, "data":boat[0]});
+                console.log ("Router.put after save boat"+ JSON.stringify(boat[0]))
+                console.log ("Router.put after save boat to load"+ JSON.stringify(load.carrier))
+                res.status(204).send()
+            }else if (load.carrier.id != null) {
                 res.status(403).send({"Error":"The load's carrier is already assigned"})
             }
            
         })
                 //res.status(204).send();
-                console.log("got a boat");
+             
             }).catch((error)=>{
                 console.log('In router.put caught ' + error); 
                     res.status(404).send({"Error": "The specified boat does not exist"});
@@ -325,7 +356,63 @@ router.put('/:b_id/loads/:l_id', function(req, res, err){
 
         });
   
-    
+//Remove load from boat
+router.delete('/:b_id/loads/:l_id', function(req, res){ 
+    const boat_key = datastore.key([BOAT, parseInt(req.params.b_id,10)]);
+    const load_key = datastore.key([LOAD, parseInt(req.params.l_id,10)]);
+        //see if boat is there then return boat
+        check_if_boat_exists(boat_key).then(
+            boat=>{
+            
+            console.log("Here's what's in the boat "+ JSON.stringify(Object.keys(boat)))
+            console.log("Here's how to dereference load "+ JSON.stringify(boat[0].load))
+            console.log("Here's what's in l_id "+ req.params.l_id)
+                    //see 
+                    if (!boat[0].load.includes(req.params.l_id) ){
+                    
+                        res.status(404).send({"Error":"No load with this load_id is at the boat with this boat_id"});
+             
+                    }else{
+                    console.log("Here is what's in boat laod before put " + boat[0].load)
+                    console.log ("Here is index of the item "+ boat[0].load.indexOf(req.params.l_id))
+                    const indexOfLoad=boat[0].load.indexOf(req.params.l_id) 
+                    console.log ("Here is the item at the index "+ boat[0].load[indexOfLoad])
+                    const loadArray=boat[0].load;
+                    console.log ("Here is loadArray before splice "+ loadArray)
+        
+                    loadArray=loadArray.splice(indexOfLoad, 1) 
+                    console.log("loadArray" + loadArray)
+                    resData = {
+                        id: boat_key.id,
+                        name: boat.name,
+                        type: boat.type,
+                        length: boat.length,
+                        load: loadArray,
+                        self: req.protocol + "://"+ req.get("host") + req.baseUrl + "/" + boat_key.id 
+                        }
+                    }
+                }).then(res.status(204).send())
+           datastore.get(load_key, (err, load) =>{
+            //console.log(slip)
+            if (err) {
+                console.error('There was an error while getting load', err);
+                res.status(400).send({"Error":"No load with this load_id is at the boat with this boat_id"});
+               
+            }else{
+
+            
+                
+            
+            }
+           
+            })
+            
+            })
+            // .catch((error)=>{
+            //     console.log('In router.delete boat from slip caught ' + error); 
+            //         res.status(404).send({"Error": "No boat with this boat_id is at the slip with this slip_id"});
+            // });  
+// });
 
 router.delete('/:id', function(req, res){
     delete_lodging(req.params.id).then(res.status(200).end())
