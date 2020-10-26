@@ -82,13 +82,14 @@ async function get_boat_loads(req, id){
 
 
 
-async function check_if_boat_exists(keyObj){
+async function check_if_entity_exists(keyObj){
+  
     try {
         const entity = await datastore.get(keyObj);
         return entity;
     } catch (error) {
-        console.log('check_if_boat_exists: caught ' + error);
-         throw error;
+        console.log('caught ' + error);
+        throw error;
     }
 }
 
@@ -242,7 +243,7 @@ router.get('/:id', function(req, res){
     
     datastore.get(key, (err, boat) => {
             if (err) {
-                console.error('There was an error', err);
+                console.error('Router.get: There was an error', err);
                 res.status(404).send({"Error":"No boat with this boat_id exists"});
                 return;
             }
@@ -293,95 +294,52 @@ router.put('/:id', function(req, res){
 
 
 
-//ORIGINAL PUT REQUEST
-// router.put('/:b_id/loads/:l_id', function(req, res){
-//     const l_key = datastore.key([LOAD, parseInt(req.params.l_id,10)]);
-//     const b_key = datastore.key([BOAT, parseInt(req.params.b_id,10)]);
-//     check_if_boats_exists(b_key).then(boat=>{
-//         datastore.get(l_key, (err, load) =>{
-//          if (err) {
-//              console.error('There was an error', err);
-//              res.status(404).send({"Error":"The specified load does not exist"});
-//          }else {
-//             put_boat_load(req.params.b_id, req.params.l_id);
-//             add_load_carrier(req.params.b_id, req.params.l_id).then(load=>{
-//                 console.log("IN lOAD "+JSON.stringify(load))
-//             })
-//          }
-//      })
-//          }).catch((error)=>{
-//              console.log('In router.put caught ' + error); 
-//                  res.status(404).send({"Error": "The specified boat does not exist"});
-//          }); 
-
-// });
-
-// router.put('/:lid/guests/:gid', function(req, res){
-//     put_reservation(req.params.lid, req.params.gid)
-//     .then(res.status(200).end());
-// });
-
-
 router.put('/:b_id/loads/:l_id', function(req, res, err){
     const l_key = datastore.key([LOAD, parseInt(req.params.l_id,10)]);
     const b_key = datastore.key([BOAT, parseInt(req.params.b_id,10)]);
-   
-    // put_boat_load(req.params.b_id, req.params.l_id).then(
-     put_load_carrier(req.params.b_id, req.params.l_id).then(
-        // datastore.get(b_key, (err, boat) =>{ 
-        //     console.log ("router.put: boat after save" + JSON.stringify(boat))
-        //     
-        // }),
-        
-        datastore.get(l_key, (err, load) =>{ 
-            console.log ("router.put: load after save" + JSON.stringify(load))
-            console.log ("router.put: load id after save" + JSON.stringify(load.carrier.id))
-            if (load.carrier.id == null){
-                    console.log("router.put:load.carrier.id is NULL")
-            }else {
+ 
+ 
+    check_if_entity_exists(b_key).then(
+        boat=>{
 
-            }
 
-        }),
-       
-      
-        res.status(204).end());    
+        }).catch((err)=>{
+            console.log('In router.put caught ' + err); 
+                res.status(404).send({"Error": "The specified boat does not exist"});
+        }); 
 
-       ;
-        // check_if_boat_exists(b_key).then(
-        //     boat=>{
+        check_if_entity_exists(l_key).then(
+            load=>{
 
-        //    datastore.get(l_key, (err, load) =>{
-        //     console.log("got load" + JSON.stringify(load))
-        //     if (err) {
-        //         console.error('There was an error', err);
-        //         res.status(404).send({"Error":"The specified load does not exist"});
-        //     }else if (load.carrier.id == null){
-        //         console.log ("router.put: load carrier must have equaled null")
-        //         console.log("router.put: here is load" + JSON.stringify(load) )
-        //         console.log("router.put: here is boat" + JSON.stringify(boat) )
-                
-        //         boat[0].load.push(req.params.l_id);
-                
-        //         console.log ("Router.put after push"+ boat[0].load)
-        //         datastore.save({"key":b_key, "data":boat[0]});
-
-        //         load.carrier.id = req.params.b_id
-        //         datastore.save({"key":l_key, "data":boat[0]});
-        //         console.log ("Router.put after save boat"+ JSON.stringify(boat[0]))
-        //         console.log ("Router.put after save boat to load"+ JSON.stringify(load.carrier))
-        //         res.status(204).send()
-        //     }else if (load.carrier.id != null) {
-        //         res.status(403).send({"Error":"The load's carrier is already assigned"})
-        //     }
-           
-        // })
+             if (load[0].carrier.id == null){
+                put_load_carrier(req.params.b_id, req.params.l_id)
+                .then(
+                 
+                    console.log ("router.put: load after save" + JSON.stringify(load[0].carrier.id)),
+                       
+                    res.status(204).send()); 
+             }else {
+                console.log ("router.put: load after save" + JSON.stringify(load[0].carrier.id));
+                res.status(403).send({"Error": "The load's carrier is already assigned"}); 
+             }
              
-        //     }).catch((error)=>{
-        //         console.log('In router.put caught ' + error); 
-        //             res.status(404).send({"Error": "The specified boat does not exist"});
-        //     }); 
+            
+    
+            }).catch((err)=>{
+                console.log('In router.put caught ' + err); 
+                    res.status(404).send({"Error": "The specified load does not exist"});
+            }); 
+         
+     
+    
+    
 
+    //  put_load_carrier(req.params.b_id, req.params.l_id).then(
+    //     datastore.get(l_key, (err, load) =>{ 
+    //         console.log ("router.put: load after save" + JSON.stringify(load))
+    //         console.log ("router.put: load  after save" + JSON.stringify(load.carrier.id))
+    //         }),
+    //     res.status(204).send());    
         });
   
 //Remove load from boat
@@ -389,7 +347,7 @@ router.delete('/:b_id/loads/:l_id', function(req, res){
     const boat_key = datastore.key([BOAT, parseInt(req.params.b_id,10)]);
     const load_key = datastore.key([LOAD, parseInt(req.params.l_id,10)]);
         //see if boat is there then return boat
-        check_if_boat_exists(boat_key).then(
+        check_if_entity_exists(boat_key).then(
             boat=>{
             
             console.log("Here's what's in the boat "+ JSON.stringify(Object.keys(boat)))
