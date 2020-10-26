@@ -24,13 +24,6 @@ async function post_load(loadObj){
 }
 
 
-
-
-
-
-
-
-
 /************************ GET HELPER FUNCTIONS******************************/
 
 // function get_guests(req){
