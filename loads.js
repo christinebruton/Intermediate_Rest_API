@@ -16,6 +16,7 @@ router.use(bodyParser.json());
 
 /************************ POST HELPER FUNCTIONS******************************/
 
+//post helper function
 async function post_load(loadObj){
     var key = datastore.key(LOAD);
 	const new_load = {"weight": loadObj.weight, "carrier": loadObj.carrier, "content": loadObj.content,"delivery_date": loadObj.delivery_date};
@@ -23,30 +24,7 @@ async function post_load(loadObj){
     return key;
 }
 
-
-/************************ GET HELPER FUNCTIONS******************************/
-
-// function get_guests(req){
-//     var q = datastore.createQuery(GUEST).limit(2);
-//     const results = {};
-//     var prev;
-//     if(Object.keys(req.query).includes("cursor")){
-//         prev = req.protocol + "://" + req.get("host") + req.baseUrl + "?cursor=" + req.query.cursor;
-//         q = q.start(req.query.cursor);
-//     }
-// 	return datastore.runQuery(q).then( (entities) => {
-//             results.items = entities[0].map(ds.fromDatastore);
-//             if(typeof prev !== 'undefined'){
-//                 results.previous = prev;
-//             }
-//             if(entities[1].moreResults !== ds.Datastore.NO_MORE_RESULTS ){ //see if there are more results
-//                 results.next = req.protocol + "://" + req.get("host") + req.baseUrl + "?cursor=" + entities[1].endCursor;
-//             }
-// 			return results;
-// 		});
-// }
-
-
+//get helper function
 async function get_loads(req){
     var q = datastore.createQuery(LOAD).limit(3);
     const results = {};
@@ -67,7 +45,6 @@ async function get_loads(req){
 }
 
 
-
 function put_guest(id, name){
     const key = datastore.key([GUEST, parseInt(id,10)]);
     const guest = {"name": name};
@@ -83,14 +60,7 @@ function delete_guest(id){
 
 /* ------------- Begin Controller Functions ------------- */
 
-// router.get('/', function(req, res){
-//     const guests = get_guests(req)
-// 	.then( (guests) => {
-//         res.status(200).json(guests);
-//     });
-// });
-
-
+//get loads
 router.get('/', function(req, res){
     const loads = get_loads(req)
 	.then( (loads) => {
@@ -122,6 +92,7 @@ router.get('/:id', function(req, res){
     });
 });
 
+//post route
 router.post('/', function(req, res){
     console.log("body"+ JSON.stringify(req.body))
     if (!req.body.weight || !req.body.carrier || !req.body.content || !req.body.delivery_date ){
@@ -139,11 +110,13 @@ router.post('/', function(req, res){
     res.status(201).send(resData)});
 });
 
+//put route
 router.put('/:id', function(req, res){
     put_guest(req.params.id, req.body.name)
     .then(res.status(200).end());
 });
 
+//delete route
 router.delete('/:id', function(req, res){
     delete_guest(req.params.id).then(res.status(200).end())
 });

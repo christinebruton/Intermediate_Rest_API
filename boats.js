@@ -5,12 +5,11 @@ const ds = require('./datastore');
 
 const datastore = ds.datastore;
 
-const LODGING = "Lodging";
-const GUEST = "Guest";
+;
 
 const BOAT = "Boat";
 const LOAD = "Load";
-const BOATLOAD = "Boatload"
+
 
 router.use(bodyParser.json());
 
@@ -20,16 +19,12 @@ router.use(bodyParser.json());
 /************************ POST HELPER FUNCTIONS******************************/
 //helper function to post but with empty array as load (TODO:should it be undefined instead)
 async function post_boat(name, type, length ){
-    // if (!length || !type || !name ){
-    //     console.log ("missing parameter")
-    // }
+   
     var key = datastore.key(BOAT);
 	const new_boat = {"name": name, "type": type, "length": length};
     await datastore.save({ "key": key, "data": new_boat });
     return key;
 }
-
-
 
 
 //**************GET HELPER ********* */
@@ -48,22 +43,6 @@ async function get_boats(req){
     return results;
 }
 
-
-function get_lodging_guests(req, id){
-    const key = datastore.key([LODGING, parseInt(id,10)]);
-    return datastore.get(key)
-    .then( (lodgings) => {
-        const lodging = lodgings[0];
-        const guest_keys = lodging.guests.map( (g_id) => {
-            return datastore.key([GUEST, parseInt(g_id,10)]);
-        });
-        return datastore.get(guest_keys);
-    })
-    .then((guests) => {
-        guests = guests[0].map(ds.fromDatastore);
-        return guests;
-    });
-}
 
 //goes with router.get('/:id/loads', function(req, res)
 async function get_boat_loads(req, id){
@@ -94,40 +73,15 @@ async function check_if_entity_exists(keyObj){
 }
 
 
-
-
-//put function for boat (not using currently)
-function put_boat(id, name, length){
-    const key = datastore.key([BOAT, parseInt(id,10)]);
-    const boat  = {"name": name, "type": type, "length": length, "loads": [] };
-    return datastore.save({"key":key, "data":boat});
-}
-
-
 /************************ PUT HELPER FUNCTIONS ******************************/
-function delete_lodging(id){
-    const key = datastore.key([LODGING, parseInt(id,10)]);
-    
-    return datastore.delete(key);
-}
+
 
 function delete_boat(id){
     const key = datastore.key([BOAT, parseInt(id,10)]);
     return datastore.delete(key);
 }
 
-function put_reservation(lid, gid){
-    const l_key = datastore.key([LODGING, parseInt(lid,10)]);
-    return datastore.get(l_key)
-    .then( (lodging) => {
-        if( typeof(lodging[0].guests) === 'undefined'){
-            lodging[0].guests = [];
-        }
-        lodging[0].guests.push(gid);
-        return datastore.save({"key":l_key, "data":lodging[0]});
-    });
 
-}
 
 //put helper for put route
 function put_boat_load(b_id, l_id){
@@ -206,25 +160,6 @@ function delete_load_carrier(b_id, l_id){
     });
 
 }
-
-
-
-//in params ->lodgings/lodging_id/guests/guest_id
-function put_reservation(lid, gid){
-    const l_key = datastore.key([LODGING, parseInt(lid,10)]);
-    return datastore.get(l_key)
-    .then( (lodging) => {
-        if( typeof(lodging[0].guests) === 'undefined'){ //set of results are in 0th entry, check if guests already
-            lodging[0].guests = [];//if no guests, then set to empty array
-        }
-        lodging[0].guests.push(gid);//add new gues id past in 
-        return datastore.save({"key":l_key, "data":lodging[0]}); //save to datastore
-    });
-
-}
-
-
-
 
 
 
