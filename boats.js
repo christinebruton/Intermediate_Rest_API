@@ -160,28 +160,35 @@ router.get('/:id/loads', function(req, res){
 router.get('/:id', function(req, res){
     const key = datastore.key([BOAT, parseInt(req.params.id,10)]);
     datastore.get(key, (err, boat) => {
-        console.log ("BOAT Get route before convert :boat[0] "+ boat[0] ) 
-        console.log ("BOAT Get route  before convertboat['loads'][0] "+ boat['loads'][0]) 
-        console.log ("BOAT Get route:before convert boat['loads'] "+ boat['loads']) 
-        console.log ("BOAT Get route: before convert boat['loads'] "+ JSON.stringify(boat)) 
+        // console.log ("BOAT Get route before convert :boat[0] "+ boat[0] ) 
+        // console.log ("BOAT Get route  before convertboat['loads'][0] "+ boat['loads'][0]) 
+        // console.log ("BOAT Get route:before convert boat['loads'] "+ boat['loads']) 
+        // console.log ("BOAT Get route: before convert boat['loads'] "+ JSON.stringify(boat)) 
             if (err) {
                 console.error('Router.get: There was an error', err);
                 res.status(404).send({"Error":"No boat with this boat_id exists"});
                 return;
             }
-            if( typeof(boat['loads'][0]) === 'undefined'){
-                boat['loads'] = [];
-            }     
-   console.log ("BOAT Get route:boat[0] "+ boat[0] ) 
-   console.log ("BOAT Get route boat['loads'][0] "+ boat['loads'][0]) 
-   console.log ("BOAT Get route: boat['loads'] "+ boat['loads']) 
-   console.log ("BOAT Get route: boat['loads'] "+ JSON.stringify(boat)) 
+            var boatArray = {};
+            if( typeof(boat['loads']) === 'undefined'){
+                boatArray = [];
+                console.log ("boatArray " + boatArray )
+            } else{
+                boatArray = boat['loads'][0] 
+                console.log ("boatArray " + boatArray )
+            }    
+
+
+//    console.log ("BOAT Get route:boat[0] "+ boat[0] ) 
+  //  console.log ("BOAT Get route boat['loads'][0] "+ boat['loads'][0]) 
+//    console.log ("BOAT Get route: boat['loads'] "+ boat['loads']) 
+//    console.log ("BOAT Get route: boat['loads'] "+ JSON.stringify(boat)) 
     queryData = {
             id: req.params.id,
             name: boat.name,
             type: boat.type,
             length: boat.length,
-            load: boat['loads'][0],
+            load: boatArray,
             self: req.protocol + "://"+ req.get("host") + req.baseUrl + "/" + key.id 
         };
         console.log("Router.get/boat: boat being returned"+ JSON.stringify(queryData));
