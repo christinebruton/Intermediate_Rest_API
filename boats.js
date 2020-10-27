@@ -107,6 +107,7 @@ function put_boat(id, name, length){
 /************************ PUT HELPER FUNCTIONS ******************************/
 function delete_lodging(id){
     const key = datastore.key([LODGING, parseInt(id,10)]);
+    
     return datastore.delete(key);
 }
 
@@ -158,19 +159,53 @@ function put_load_carrier(b_id, l_id){
         console.log ("put_load_carrier . then after PUSH load[0]"+JSON.stringify(load[0]))
         console.log ("put_load_carrier . then after PUSH load"+JSON.stringify(load))
        
-        // if( load[0].carrier.id ==='null'){
-        //     console.log("In put_load_carrier: load.carrier is null")
-       
-
-        //     console.log("In put_load_carrier: data to be loaded" + data)
-        // }
-        
-    
         return datastore.save({"key":l_key, "data":load[0]});
     });
 
 }
 
+function delete_boat_load(b_id, l_id){
+    const l_key = datastore.key([LOAD, parseInt(l_id,10)]);
+    const b_key = datastore.key([BOAT, parseInt(b_id,10)]);
+    console.log("delete_boat_load:  b_id" + JSON.stringify(b_id) + "l_id" + JSON.stringify(l_id))
+    return datastore.get(b_key)
+    .then( (boat) => {
+       
+        if( typeof(boat[0].loads) === 'undefined'){
+            boat[0].loads = [];
+        }
+        boat[0].loads.push(l_id);
+        console.log ("In delete_boat_load "+ boat[0].loads)
+        const array = boat[0].loads;
+ 
+        const valueToRemove = l_id;
+        console.log ("value "+valueToRemove)
+        const filteredItems = array.filter((item) => item !== valueToRemove)
+        console.log ("filtered "+ filteredItems)
+        boat[0].loads = filteredItems;
+        console.log ("boat[0].loads after filer "+ boat[0].loads) 
+        return datastore.save({"key":b_key, "data":boat[0]});
+    });
+
+}
+
+
+function delete_load_carrier(b_id, l_id){
+    const l_key = datastore.key([LOAD, parseInt(l_id,10)]);
+    const b_key = datastore.key([BOAT, parseInt(b_id,10)]);
+    console.log("delete_load_carrier: b_id" + JSON.stringify(b_id) + "l_id" + JSON.stringify(l_id))
+    return datastore.get(l_key)
+    .then( (load) => {
+        console.log ("delete_load_carrier . then load.carrier"+JSON.stringify(load[0].carrier.id))
+        load[0].carrier.id = null;
+        console.log ("delete_load_carrier . then after PUSH "+JSON.stringify(load[0].carrier.id))
+        console.log ("delete_load_carrier . then after PUSH load[0]"+JSON.stringify(load[0]))
+        console.log ("delete_load_carrier . then after PUSH load"+JSON.stringify(load))
+       
+        return datastore.save({"key":l_key, "data":load[0]});
+    });
+
+}
 
 
 
@@ -197,12 +232,7 @@ function put_reservation(lid, gid){
 
 /* ------------- Begin Controller Functions ------------- */
 
-// router.get('/', function(req, res){
-//     const lodgings = get_lodgings(req)
-// 	.then( (lodgings) => {
-//         res.status(200).json(lodgings);
-//     });
-// });
+
 
 router.get('/', function(req, res){
     const boats = get_boats(req)
@@ -211,12 +241,7 @@ router.get('/', function(req, res){
     });
 });
 
-// router.get('/:id/guests', function(req, res){
-//     const lodgings = get_lodging_guests(req, req.params.id)
-// 	.then( (lodgings) => {
-//         res.status(200).json(lodgings);
-//     });
-// });
+
 
 //get boat's loads
 router.get('/:id/loads', function(req, res){
@@ -227,15 +252,7 @@ router.get('/:id/loads', function(req, res){
 });
 
 
-// router.post('/', function(req, res){
-//     post_lodging(req.body.name, req.body.description, req.body.price)
-//     .then( key => {res.status(200).send('{ "id": ' + key.id + ' }')} );
-// });
 
-// router.post('/', function(req, res){
-//     post_boat(req.body.name, req.body.type, req.body.length)
-//     .then( key => {res.status(201).send('{ "id": ' + key.id + ' }')} );
-// });
 
 //Get a Boat
 router.get('/:id', function(req, res){
@@ -247,13 +264,10 @@ router.get('/:id', function(req, res){
                 res.status(404).send({"Error":"No boat with this boat_id exists"});
                 return;
             }
-            // if( typeof(boat[0].loads) === 'undefined'){
-            //     boat[0].loads = [];
-            // }     
-            console.log("keys of boat loads" + Object.keys(boat))
-            //console.log("keys of boat loads" + Object.keys(boat[0]))
-            console.log("keys of boat loads" + Object.keys(boat['loads']))
-          
+            if( typeof(boat[0]) === 'undefined'){
+                boat['loads'] = [];
+            }     
+    
     queryData = {
             id: req.params.id,
             name: boat.name,
@@ -304,8 +318,6 @@ router.put('/:id', function(req, res){
 router.put('/:b_id/loads/:l_id', function(req, res, err){
     const l_key = datastore.key([LOAD, parseInt(req.params.l_id,10)]);
     const b_key = datastore.key([BOAT, parseInt(req.params.b_id,10)]);
- 
- 
     check_if_entity_exists(b_key).then(
         boat=>{
 
@@ -336,74 +348,48 @@ router.put('/:b_id/loads/:l_id', function(req, res, err){
                     res.status(404).send({"Error": "The specified load does not exist"});
             }); 
          
-     
-    
-    
-
-    //  put_load_carrier(req.params.b_id, req.params.l_id).then(
-    //     datastore.get(l_key, (err, load) =>{ 
-    //         console.log ("router.put: load after save" + JSON.stringify(load))
-    //         console.log ("router.put: load  after save" + JSON.stringify(load.carrier.id))
-    //         }),
-    //     res.status(204).send());    
+   
         });
   
 //Remove load from boat
 router.delete('/:b_id/loads/:l_id', function(req, res){ 
-    const boat_key = datastore.key([BOAT, parseInt(req.params.b_id,10)]);
-    const load_key = datastore.key([LOAD, parseInt(req.params.l_id,10)]);
-        //see if boat is there then return boat
-        check_if_entity_exists(boat_key).then(
-            boat=>{
-            
-            console.log("Here's what's in the boat "+ JSON.stringify(Object.keys(boat)))
-            console.log("Here's how to dereference load "+ JSON.stringify(boat[0].load))
-            console.log("Here's what's in l_id "+ req.params.l_id)
-                    //see 
-                    if (!boat[0].load.includes(req.params.l_id) ){
-                    
-                        res.status(404).send({"Error":"No load with this load_id is at the boat with this boat_id"});
-             
-                    }else{
-                    console.log("Here is what's in boat laod before put " + boat[0].load)
-                    console.log ("Here is index of the item "+ boat[0].load.indexOf(req.params.l_id))
-                    const indexOfLoad=boat[0].load.indexOf(req.params.l_id) 
-                    console.log ("Here is the item at the index "+ boat[0].load[indexOfLoad])
-                    const loadArray=boat[0].load;
-                    console.log ("Here is loadArray before splice "+ loadArray)
-        
-                    loadArray=loadArray.splice(indexOfLoad, 1) 
-                    console.log("loadArray" + loadArray)
-                    resData = {
-                        id: boat_key.id,
-                        name: boat.name,
-                        type: boat.type,
-                        length: boat.length,
-                        load: loadArray,
-                        self: req.protocol + "://"+ req.get("host") + req.baseUrl + "/" + boat_key.id 
-                        }
-                    }
-                }).then(res.status(204).send())
-           datastore.get(load_key, (err, load) =>{
-            //console.log(slip)
-            if (err) {
-                console.error('There was an error while getting load', err);
-                res.status(400).send({"Error":"No load with this load_id is at the boat with this boat_id"});
+    const b_key = datastore.key([BOAT, parseInt(req.params.b_id,10)]);
+    const l_key = datastore.key([LOAD, parseInt(req.params.l_id,10)]);
+    check_if_entity_exists(b_key).then(
+        boat=>{
+
+
+        delete_boat_load(req.params.b_id, req.params.l_id).then(key=>{console.log ('In router.delete'+ JSON.stringify(boat[0].loads)), res.status(204).end()});
+        }).catch((err)=>{
+            console.log('In router.delete caught ' + err); 
+                res.status(404).send({"Error": "The specified boat does not exist"});
+        });  
+
+        check_if_entity_exists(l_key).then(
+            load=>{
+
+             if (load[0].carrier.id != null){
                
-            }else{
+                delete_load_carrier(req.params.b_id, req.params.l_id).then(
+                    res.status(204).send()); 
+
+             }else {
+                console.log ("router.delete: load after delete" + JSON.stringify(load[0].carrier.id));
+                res.status(403).send({"Error": "The load does not have a carrier"}); 
+             }
+    
+            }).catch((err)=>{
+                console.log('In router.delete  caught ' + err); 
+                    res.status(404).send({"Error": "The specified load does not exist"});
+            }); 
+
 
             
-                
-            
-            }
-           
-            })
-            
-            })
-
+     })
+  
 
 router.delete('/:id', function(req, res){
-    delete_lodging(req.params.id).then(res.status(200).end())
+    delete_boat(req.params.id).then(res.status(204).end())
 });
 
 /* ------------- End Controller Functions ------------- */
