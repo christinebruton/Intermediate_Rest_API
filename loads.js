@@ -7,9 +7,13 @@ const ds = require('./datastore');
 const datastore = ds.datastore;
 
 const GUEST = "Guest";
-const LOAD  = "Load"
+const LOAD  = "Load";
 
 router.use(bodyParser.json());
+
+const u = require('./utils.js');
+
+
 
 
 /* ------------- Begin guest Model Functions ------------- */
@@ -26,7 +30,7 @@ async function post_load(loadObj){
 
 //get helper function
 async function get_loads(req){
-    var q = datastore.createQuery(LOAD).limit(3);
+    var q = datastore.createQuery(LOAD).limit(4);
     const results = {};
     var prev;
     if(Object.keys(req.query).includes("cursor")){
@@ -34,7 +38,7 @@ async function get_loads(req){
         q = q.start(req.query.cursor);
     }
 	const entities = await datastore.runQuery(q);
-    results.items = entities[0].map(ds.fromDatastore);
+    results.allLoads = entities[0].map(ds.fromDatastore);
     if (typeof prev !== 'undefined') {
         results.previous = prev;
     }
@@ -122,7 +126,30 @@ router.put('/:id', function(req, res){
 
 //delete route
 router.delete('/:id', function(req, res){
-    delete_guest(req.params.id).then(res.status(200).end())
+    const l_key = datastore.key([LOAD, parseInt(req.params.id,10)]) 
+
+// console.log (u)
+u.check(l_key).then(
+        load=>{
+
+        //    console.log("load.carrier "+ Object.keys(load[0].carrier))
+        //    console.log("load.carrier "+ load[0].carrier.id)
+           
+        //     console.log("load.carrier.id"+req.params.id)
+        const loadID =  req.params.id  
+        const carrierID = load[0].carrier.id
+       //  if (load[0].carrier.id != null){
+           
+         // }else {
+             u.dbl(carrierID, loadID).then()
+             .then(res.status(204).end());
+//         }
+
+        }).catch((err)=>{
+            console.log('In LOAD router.delete  caught ' + err); 
+                res.status(404).send({"Error": "The specified load does not exist"});
+        }); 
+        
 });
 
 /* ------------- End Controller Functions ------------- */

@@ -11,6 +11,7 @@ const LOAD = "Load";
 router.use(bodyParser.json());
 
 
+
 /* ------------- Begin Lodging Model Functions ------------- */
 /************************ POST HELPER FUNCTIONS******************************/
 //helper function to post but with empty array as load (TODO:should it be undefined instead)
@@ -26,13 +27,13 @@ async function post_boat(name, type, length ){
 //**************GET HELPER ********* */
 //for view boats helper funciton to get boats and display 3 at a time
 async function get_boats(req){
-    var q = datastore.createQuery(BOAT).limit(3);
+    var q = datastore.createQuery(BOAT).limit(4);
     const results = {};
     if(Object.keys(req.query).includes("cursor")){ //if there is a cursor
         q = q.start(req.query.cursor); //set the start point of the query to that cursor location
     }
 	const entities = await datastore.runQuery(q);
-    results.items = entities[0].map(ds.fromDatastore);
+    results.allBoats = entities[0].map(ds.fromDatastore);
     if (entities[1].moreResults !== ds.Datastore.NO_MORE_RESULTS) {
         results.next = req.protocol + "://" + req.get("host") + req.baseUrl + "?cursor=" + entities[1].endCursor;
     }
@@ -41,17 +42,39 @@ async function get_boats(req){
 
 
 //goes with router.get('/:id/loads', function(req, res)
-async function get_boat_loads(req, id){
+// async function get_boat_loads(req, id){
+//     const key = datastore.key([BOAT, parseInt(id,10)]);
+//     const boats = await datastore.get(key);
+//     const boat = boats[0];
+//     const load_keys = boat.loads.map((l_id) => {
+//         return datastore.key([LOAD, parseInt(l_id, 10)]);
+//     });
+//     const loads = await datastore.get(load_keys);
+//     loads = loads[0].map(ds.fromDatastore);
+//     return loads;
+// }
+
+function get_boat_loads(req, id){
+    console.log ("In get_boat_loads")
     const key = datastore.key([BOAT, parseInt(id,10)]);
-    const boats = await datastore.get(key);
-    const boat = boats[0];
-    const load_keys = boat.loads.map((l_id) => {
-        return datastore.key([LOAD, parseInt(l_id, 10)]);
-    });
-    const loads = await datastore.get(load_keys);
-    loads = loads[0].map(ds.fromDatastore);
-    return loads;
+    return datastore.get(key)
+    .then( (boats) => {
+        
+        const boat = boats[0];
+        console.log ("In get_boat_loads: in .then boats "+ JSON.stringify(boats))
+        const load_keys = boat.loads.map( (l_id) => {
+            return datastore.key([LOAD, parseInt(l_id,10)]);
+        });
+        console.log ("In get_boat_loads: load keys"+ JSON.stringify(load_keys))
+        return datastore.get(load_keys);
+    })
+    .then((loads) => {
+        loads = loads[0].map(ds.fromDatastore);
+        return loads;
+    }).catch()
 }
+
+
 
 /************************ PUT HELPER FUNCTIONS ******************************/
 
@@ -75,18 +98,32 @@ function delete_boat(id){
 }
 
 //put helper for put route
-async function put_boat_load(b_id, l_id){
-    const l_key = datastore.key([LOAD, parseInt(l_id,10)]);
+// async function put_boat_load(b_id, l_id){
+//     const l_key = datastore.key([LOAD, parseInt(l_id,10)]);
+//     const b_key = datastore.key([BOAT, parseInt(b_id,10)]);
+//     const boat = await datastore.get(b_key);
+//     if (typeof (boat[0].loads) === 'undefined') {
+//         boat[0].loads = [];
+//     }
+//     boat[0].loads.push(l_id);
+//     console.log("In put_boat_load after PUSH l_id " + boat[0].loads);
+//     return datastore.save({ "key": b_key, "data": boat[0] });
+
+// }
+function put_boat_load(b_id, l_id){
+    console.log ("Here is the l_id I'm trying to add "+ l_id)
     const b_key = datastore.key([BOAT, parseInt(b_id,10)]);
-    const boat = await datastore.get(b_key);
-    if (typeof (boat[0].loads) === 'undefined') {
-        boat[0].loads = [];
-    }
-    boat[0].loads.push(l_id);
-    console.log("In put_boat_load after PUSH l_id " + boat[0].loads);
-    return datastore.save({ "key": b_key, "data": boat[0] });
+    return datastore.get(b_key)
+    .then( (boat) => {
+        if (typeof (boat[0].loads) === 'undefined') {
+                    boat[0].loads = [];
+        }
+        boat[0].loads.push(l_id);
+        return datastore.save({"key":b_key, "data":boat[0]});
+    });
 
 }
+
 
 //put boat into carrier 
 async function put_load_carrier(b_id, l_id){
@@ -150,10 +187,18 @@ router.get('/', function(req, res){
 
 //get boat's loads
 router.get('/:id/loads', function(req, res){
-    const boats = get_boat_loads(req, req.params.id)
-	.then( (boats) => {
-        res.status(200).json(boats);
-    });
+
+    console.log ("In router.get/boatID/loads")
+     const boats = get_boat_loads(req, req.params.id)
+	 .then( (loads) => {
+        console.log ("/:id/loads here are loads for boat "+ req.params.id + "loads" + JSON.stringify(loads) )
+        res.status(200).json(loads);
+    console.log ("In router.get/boatID/loads:" + JSON.stringify(loads)) 
+}).catch((err)=>{
+    console.log('In router.get/boatID/loads  caught ' + err); 
+        res.status(404).send({"Error": "The specified load does not exist"});
+}); 
+    // res.status(200).send().json();
 });
 
 //Get a Boat
@@ -169,12 +214,12 @@ router.get('/:id', function(req, res){
                 res.status(404).send({"Error":"No boat with this boat_id exists"});
                 return;
             }
-            var boatArray = {};
+           
             if( typeof(boat['loads']) === 'undefined'){
                 boatArray = [];
                 console.log ("boatArray " + boatArray )
             } else{
-                boatArray = boat['loads'][0] 
+                var boatArray= boat['loads']; //re-assign reference to array of loads
                 console.log ("boatArray " + boatArray )
             }    
 
@@ -272,7 +317,7 @@ router.delete('/:b_id/loads/:l_id', function(req, res){
                     res.status(204).send()); 
              }else {
                 console.log ("router.delete: load after delete" + JSON.stringify(load[0].carrier.id));
-                res.status(403).send({"Error": "The load does not have a carrier"}); 
+                res.status(403).send({"Error": "Delete: No load to delete"}); 
              }
             }).catch((err)=>{
                 console.log('In router.delete  caught ' + err); 
@@ -288,3 +333,4 @@ router.delete('/:id', function(req, res){
 /* ------------- End Controller Functions ------------- */
 
 module.exports = router;
+;
