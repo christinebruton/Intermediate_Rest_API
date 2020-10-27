@@ -87,17 +87,16 @@ router.get('/:id', function(req, res){
             delivery_date: load.delivery_date,
             self: req.protocol + "://"+ req.get("host") + req.baseUrl + "/" + key.id 
         };
-        console.log(queryData);
+        console.log("Router.get/load: returning data "+ JSON.stringify(queryData));
         res.status(200).json(queryData)
     });
 });
 
 //post route
 router.post('/', function(req, res){
-    console.log("body"+ JSON.stringify(req.body))
     if (!req.body.weight || !req.body.carrier || !req.body.content || !req.body.delivery_date ){
         res.status(400).send({"Error":"The request object is missing at least one of the required attributes"});
-    }
+    }else{
     post_load(req.body)
     .then( key => {resData = {
         id: key.id,
@@ -107,7 +106,12 @@ router.post('/', function(req, res){
         delivery_date: req.body.delivery_date,
         self: req.protocol + "://"+ req.get("host") + req.baseUrl + "/" + key.id 
     };
-    res.status(201).send(resData)});
+    console.log("Router.post: posted load"+ JSON.stringify(resData)),
+    res.status(201).send(resData)}).catch((err)=>{
+        console.log('In router.post caught ' + err); 
+            res.status(404).send();
+    }); 
+    }
 });
 
 //put route
